@@ -1,14 +1,12 @@
 // @TODO: YOUR CODE HERE!
 var svgWidth = 960;
 var svgHeight = 500;
-
 var margin = {
     top: 20,
     right: 40,
     bottom: 60,
     left: 100
 };
-
 var width = svgWidth - margin.left - margin.right;
 var height = svgHeight - margin.top - margin.bottom;
 
@@ -23,6 +21,7 @@ var chartGroup = svg.append("g")
 
 // Import Data
 d3.csv("assets/data/data.csv").then(function (data) {
+    console.log(data);
 
     // Step 1: Parse Data/Cast as numbers
     // ==============================
@@ -33,20 +32,23 @@ d3.csv("assets/data/data.csv").then(function (data) {
 
     // Step 2: Create scale functions
     // ==============================
-    var xLinearScale = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d.healthcare)])
+
+    // xScale = poverty
+    var xScale = d3.scaleLinear()
+        .domain([d3.min(data, d => d.poverty) - 1, d3.max(data, d => d.poverty) + 2])
         .range([0, width]);
 
-    var yLinearScale = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d.poverty)])
+    // yScale = healthcare
+    var yScale = d3.scaleLinear()
+        .domain([d3.min(data, d => d.healthcare) - 0.5, d3.max(data, d => d.healthcare) + 3])
         .range([height, 0]);
 
-    // Step 3: Create axis functions
+    // Create axis functions
     // ==============================
-    var bottomAxis = d3.axisBottom(xLinearScale);
-    var leftAxis = d3.axisLeft(yLinearScale);
+    var bottomAxis = d3.axisBottom(xScale);
+    var leftAxis = d3.axisLeft(yScale);
 
-    // Step 4: Append Axes to the chart
+    // Append Axes to the chart
     // ==============================
     chartGroup.append("g")
         .attr("transform", `translate(0, ${height})`)
@@ -69,7 +71,30 @@ d3.csv("assets/data/data.csv").then(function (data) {
         .attr("class", "axisText")
         .text("In Poverty (%)");
 
-    // Step 5: Create Circles
+
+    // Append initial circles
+    var circlesGroup = chartGroup.attr("class", "nodes")
+        .selectAll("circle")
+        .data(data)
+        .enter()
+        .append("g");
+
+    circlesGroup.append("circle")
+        .attr("class", "node")
+        .attr("r", 10)
+        .classed("stateCircle", true)
+        .attr("cx", d => xScale(d.poverty))
+        .attr("cy", d => yScale(d.healthcare));
+
+    circlesGroup.append("text")
+        .classed("stateText", true)
+        .attr("x", d => xScale(d.poverty))
+        .attr("y", d => yScale(d.healthcare))
+        .attr("alignment-baseline", "central")
+        .style("font-size", "10px")
+        .text(d => d.abbr);
+
+    // Create Circles
     // ==============================
     var circlesGroup = chartGroup.selectAll("circle")
         .data(data)
@@ -79,9 +104,15 @@ d3.csv("assets/data/data.csv").then(function (data) {
         .attr("cy", d => yLinearScale(d.poverty))
         .attr("r", "15")
         .attr("fill", "pink")
-        .attr("opacity", ".5");
+        .attr("opacity", ".5")
+        .append("text")
 
-    // Step 6: Initialize tool tip
+        // returning the abbreviation to .text, which makes the text the abbreviation.
+        .text(function (data) {
+            return data.abbr;
+        });
+
+    // Initialize tool tip
     // ==============================
     var toolTip = d3.tip()
         .attr("class", "tooltip")
@@ -90,11 +121,11 @@ d3.csv("assets/data/data.csv").then(function (data) {
             return (`${d.healthcare}<br>H: ${d.poverty}<br>`)
         });
 
-    // Step 7: Create tooltip in the chart
+    // Create tooltip in the chart
     // ==============================
     chartGroup.call(toolTip);
 
-    // Step 8: Create event listeners to display and hide the tooltip
+    // Create event listeners to display and hide the tooltip
     // ==============================
     circlesGroup.on("click", function (data) {
         toolTip.show(data, this);
@@ -104,22 +135,6 @@ d3.csv("assets/data/data.csv").then(function (data) {
             toolTip.hide(data);
         });
 
-    // Append the circles 
-    circlesGroup.append("circle")
-        .attr("cx", data => xLinearScale(data[chosenXAxis]))
-        .attr("cy", data => yLinearScale(data[chosenYAxis]))
-        .attr("r", width * 0.015)
-        .classed("stateCircle", true);
-        
-    // Append the text inside circles
-    circlesGroup.append("text")
-        .attr("x", data => xLinearScale(data[chosenXAxis]))
-        .attr("y", data => yLinearScale(data[chosenYAxis]) + 4)
-        .text(data => data.abbr)
-        .classed("stateText", true)
-        .style("font-size", width * 0.015 + 1 + "px");
-
-
-}).catch(function (error) {
+  }).catch(function (error) {
     console.log(error);
-});
+})
